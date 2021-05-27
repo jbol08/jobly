@@ -1,7 +1,7 @@
 "use strict";
 
 const request = require("supertest");
-
+const {UnauthorizedError} = require('../expressError')
 const app = require("../app");
 const { isAdmin } = require("../middleware/auth");
 

@@ -3,6 +3,7 @@
 const request = require("supertest");
 
 const app = require("../app");
+const { isAdmin } = require("../middleware/auth");
 
 const {
   commonBeforeAll,
@@ -111,4 +112,34 @@ describe("POST /auth/register", function () {
         });
     expect(resp.statusCode).toEqual(400);
   });
+});
+describe('isAdmin', function () {
+  test('isAdmin works', function () {
+    expect.assertions(1);
+    let req = {};
+    let res = { locals: { user: { username: 'first', isAdmin: true } } };
+    let next = function (err) {
+      expect(err).toBeFalsy();
+    };
+    isAdmin(req, res, next);
+  });
+  test('not admin works', function () {
+    expect.assertions(1);
+    let req = {};
+    let res = { locals: { user: { username: 'first', isAdmin: false } } };
+    let next = function (err) {    
+        expect(err instanceof UnauthorizedError).toBeTruthy();
+      };
+    isAdmin(req, res, next);
+  });
+  test('not defined returns error', function () {
+    expect.assertions(1);
+    let req = {};
+    let res = { locals: { } };
+    let next = function (err) {    
+      expect(err instanceof UnauthorizedError).toBeTruthy();
+    };
+    isAdmin(req, res, next);
+  });
+
 });

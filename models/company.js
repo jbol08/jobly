@@ -1,8 +1,10 @@
 "use strict";
 
+const { query } = require("express");
 const db = require("../db");
 const { BadRequestError, NotFoundError } = require("../expressError");
 const { sqlForPartialUpdate } = require("../helpers/sql");
+const { search } = require("../routes/users");
 
 /** Related functions for companies. */
 
@@ -58,7 +60,30 @@ class Company {
                   logo_url AS "logoUrl"
            FROM companies
            ORDER BY name`);
-    return companiesRes.rows;
+    queryValues = [];
+    sqlQuery = [];
+    searchFilters = {};
+    let { name, minEmployees, maxEmployees } = searchFilters;
+    if (minEmployees > maxEmployees) {
+      throw new BadRequestError("Minimum Employees cannot be higher than Maximum Employees");
+    }
+    if (minEmployees !== undefined) {
+      queryValues.push(minEmployees);
+      sqlQuery.push(`num_employees >= $${queryValues.length}`);
+    }
+
+    if (maxEmployees !== undefined) {
+      queryValues.push(maxEmployees);
+      sqlQuery.push(`num_employees <= $${queryValues.length}`);
+    }
+
+    if (name) {
+      queryValues.push(`%${name}%`);
+      sqlQuery.push(`name ILIKE $${queryValues.length}`);
+    }
+    companiesRes = companiesRes + 'ORDER by name';
+    let query = await db.query(companiesRes, queryValues);
+    return query.rows;
   }
 
   /** Given a company handle, return data about company.

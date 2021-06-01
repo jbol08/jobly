@@ -54,7 +54,7 @@ describe("findAll", function () {
         id: testJobIds[1],
         title: "job2",
         salary: 1,
-        equity: '.1',
+        equity: '0.1',
         companyHandle: "c2",
         companyName: "C2",
       },
@@ -104,7 +104,7 @@ describe("findAll", function () {
         id : testJobIds[1],
         title: "job2",
         salary: 1,
-        equity: '.1',
+        equity: '0.1',
         companyHandle: "c2",
         companyName: "C2",
       },
@@ -125,21 +125,22 @@ describe("findAll", function () {
         id : testJobIds[1],
         title: "job2",
         salary: 1,
-        equity: '.1',
+        equity: '0.1',
         companyHandle: "c2",
         companyName: "C2",
       },
     ]);
   });
-  test('find by name', async function () {
-    let jobs = await Job.findAll({ title: "job1" });
+  test('find by name with ILIKE', async function () {
+    let jobs = await Job.findAll({ title: "ob1" });
     expect(jobs).toEqual([
         {         
         id : testJobIds[0],
         title: "job1",
         salary: 100,
         equity: '1',
-        
+        companyHandle : 'c1',
+				companyName   : 'C1',        
       },
     ]);
   });
@@ -152,9 +153,9 @@ describe("get", function () {
     let job = await Job.get(testJobIds[0]);
     expect(job).toEqual({
       id: testJobIds[0],
-      title: "Job1",
+      title: "job1",
       salary: 100,
-      equity: "0.1",
+      equity: "1",
       company: {
         handle: "c1",
         name: "C1",
@@ -181,7 +182,7 @@ describe("update", function () {
     let updateData = {
         title: "new",
         salary: 300,
-        equity: '.5',
+        equity: '0.5',
         
   };
 
@@ -221,7 +222,7 @@ describe("remove", function () {
   test("works", async function () {
     await Job.remove(testJobIds[0]);
     const res = await db.query(
-        "SELECT id FROM jobs WHERE id=$1", testJobIds[0]);
+        "SELECT id FROM jobs WHERE id=$1", [testJobIds[0]]);
     expect(res.rows.length).toEqual(0);
   });
 

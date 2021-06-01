@@ -7,7 +7,7 @@ const express = require("express");
 
 const { BadRequestError } = require("../expressError");
 const { ensureLoggedIn, isAdmin } = require("../middleware/auth");
-const Company = require("../models/company");
+const Job = require("../models/jobs");
 
 const companyNewSchema = require("../schemas/companyNew.json");
 const companyUpdateSchema = require("../schemas/companyUpdate.json");
@@ -32,8 +32,8 @@ router.post("/", ensureLoggedIn, isAdmin, async function (req, res, next) {
       throw new BadRequestError(errs);
     }
 
-    const company = await Company.create(req.body);
-    return res.status(201).json({ company });
+    const job = await Job.create(req.body);
+    return res.status(201).json({ job });
   } catch (err) {
     return next(err);
   }
@@ -51,14 +51,17 @@ router.post("/", ensureLoggedIn, isAdmin, async function (req, res, next) {
  */
 
 router.get("/", async function (req, res, next) {
+  const query = req.query;
+  if (query.minSalary !== undefined) query.minSalary = +query.minSalary;
+  query.hasEquity = query.hasEquity === "true";
   try {
     const result = jsonschema.validate(filters, companySearchSchema);
     if (!result.valid) {
       let listOfErrors = result.errors.map((e) => e.stack);
       throw new BadRequestError(listOfErrors);
     }
-    const companies = await Company.findAll();
-    return res.json({ companies });
+    const jobs = await Job.findAll();
+    return res.json({ jobs });
   } catch (err) {
     return next(err);
   }
@@ -72,10 +75,10 @@ router.get("/", async function (req, res, next) {
  * Authorization required: none
  */
 
-router.get("/:handle", async function (req, res, next) {
+router.get("/:id", async function (req, res, next) {
   try {
-    const company = await Company.get(req.params.handle);
-    return res.json({ company });
+    const job = await Job.get(req.params.handle);
+    return res.json({ job });
   } catch (err) {
     return next(err);
   }
@@ -92,7 +95,7 @@ router.get("/:handle", async function (req, res, next) {
  * Authorization required: login
  */
 
-router.patch("/:handle", ensureLoggedIn,isAdmin, async function (req, res, next) {
+router.patch("/:id", ensureLoggedIn,isAdmin, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, companyUpdateSchema);
     if (!validator.valid) {
@@ -100,8 +103,8 @@ router.patch("/:handle", ensureLoggedIn,isAdmin, async function (req, res, next)
       throw new BadRequestError(errs);
     }
 
-    const company = await Company.update(req.params.handle, req.body);
-    return res.json({ company });
+    const job = await Job.update(req.params.handle, req.body);
+    return res.json({ job });
   } catch (err) {
     return next(err);
   }
@@ -112,9 +115,9 @@ router.patch("/:handle", ensureLoggedIn,isAdmin, async function (req, res, next)
  * Authorization: login
  */
 
-router.delete("/:handle", ensureLoggedIn, isAdmin, async function (req, res, next) {
+router.delete("/:id", ensureLoggedIn, isAdmin, async function (req, res, next) {
   try {
-    await Company.remove(req.params.handle);
+    await Job.remove(req.params.handle);
     return res.json({ deleted: req.params.handle });
   } catch (err) {
     return next(err);

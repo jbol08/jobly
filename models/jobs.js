@@ -1,68 +1,62 @@
 'use strict';
-class Jobs {
-    /** Create a company (from data), update db, return new company data.
+
+const db = require("../db");
+const { NotFoundError } = require("../expressError");
+const { sqlForPartialUpdate } = require("../helpers/sql");
+
+class Job {
+    /** Create a job (from data), update db, return new company data.
      *
-     * data should be { handle, name, description, numEmployees, logoUrl }
+     * data should be { title, salary, equity,company_handle }
      *
-     * Returns { handle, name, description, numEmployees, logoUrl }
+     * Returns { title, salary, equity,companyHandle }
      *
-     * Throws BadRequestError if company already in database.
      * */
   
-    static async create({ id,title,salary,equity,company_handle }) {
-      const duplicateCheck = await db.query(
-            `SELECT handle
-             FROM jobs
-             WHERE id = $1`,
-          [id]);
-  
-      if (duplicateCheck.rows[0])
-        throw new BadRequestError(`Duplicate job: ${company_handle}`);
-  
+    static async create({title,salary,equity,companyHandle}) {
       const result = await db.query(
-            `INSERT INTO jobs
-             (id, title, salary, equity,company_handle)
-             VALUES ($1, $2, $3, $4, $5)
-             RETURNING id, title, salary, equity,company_handle AS "company"`,
-          [
-            id,
-            title,
-            salary,
-            equity,
-            company_handle,
-          ],
-      );
-      const company = result.rows[0];
+            `INSERT INTO jobs (title,
+                               salary,
+                               equity,
+                               company_handle)
+             VALUES ($1, $2, $3, $4)
+             RETURNING id, title, salary, equity, company_handle AS "companyHandle"`,
+          [title,salary,equity,companyHandle]);
+      let job = result.rows[0];
   
-      return company;
-    }
+      return job;
+  }
+  
+
   
     /** Find all jobs.
      *
-     * Returns [{ handle, name, description, numEmployees, logoUrl }, ...]
+     * Returns [{ title, salary, equity,companyHandle }, ...]
      * */
   
     static async findAll(searchFilters = {}) {
-      let filterQuery =
-            `SELECT id, title, salary, equity,company_handle as "company"
-             FROM jobs`;
+      let filterQuery = `SELECT j.id,
+                         j.title,
+                         j.salary,
+                         j.equity,
+                         j.company_handle AS "companyHandle",
+                         c.name AS "companyName"
+                         FROM jobs j LEFT JOIN companies AS c ON c.handle = j.company_handle`;
   
       let queryValues = [];
       let sqlQuery = [];
-      let { title, minSalary, hasEquity } = searchFilters;
+      const {title,minSalary,hasEquity} = searchFilters
       
       if (minSalary !== undefined) {
         queryValues.push(minSalary);
         sqlQuery.push(`salary >= $${queryValues.length}`);
       }
   
-      if (hasEquity !== undefined && hasEquity === true) {
-        queryValues.push(hasEquity);
+      if (hasEquity  === true) {
         sqlQuery.push(`equity > 0`);
       }
-      if (hasEquity !== undefined && hasEquity === false) {
-        queryValues.push(hasEquity);
-        sqlQuery.push(`equity < 0`);  
+      if (hasEquity === false) {
+        sqlQuery.push(`No equity for this position.`);  
       }
   
       if (title !== undefined) {
@@ -73,29 +67,44 @@ class Jobs {
       if (sqlQuery.length > 0) {
         filterQuery += " WHERE " + sqlQuery.join(" AND ");
       }
-      filterQuery = filterQuery + 'ORDER by title';
-      let companiesRes = await db.query(filterQuery, queryValues);
-      return companiesRes.rows;
+      filterQuery = filterQuery + ` ORDER by title`;
+      let jobRes = await db.query(filterQuery, queryValues);
+      return jobRes.rows;
     }
   
     /** Given a company handle, return data about company.
      *
-     * Returns { handle, name, description, numEmployees, logoUrl, jobs }
-     *   where jobs is [{ id, title, salary, equity, companyHandle }, ...]
+     * Returns { title, salary, equity,companyHandle}
+     *   where companies is [{ handle,name,description,num_employees,logo_url}, ...]
      *
      * Throws NotFoundError if not found.
      **/
   
     static async get(id) {
-      const companyRes = await db.query(
-            `SELECT id, title, salary, equity,company_handle AS "company"
+      const jobs = await db.query(
+            `SELECT id,
+                    title,
+                    salary,
+                    equity,
+                    company_handle AS "companyHandle"
              FROM jobs
              WHERE id = $1`,
           [id]);
   
-      const job = companyRes.rows[0];
+      const job = jobs.rows[0];
   
       if (!job) throw new NotFoundError(`No job: ${id}`);
+      const companiesRes = await db.query(
+          `SELECT handle,
+                  name,
+                  description,
+                  num_employees AS "numEmployees",
+                  logo_url AS "logoUrl"
+            FROM companies
+            WHERE handle = $1`, [job.companyHandle]);
+
+      delete job.companyHandle;
+      job.company = companiesRes.rows[0];
   
       return job;
     }
@@ -105,9 +114,9 @@ class Jobs {
      * This is a "partial update" --- it's fine if data doesn't contain all the
      * fields; this only changes provided ones.
      *
-     * Data can include: {name, description, numEmployees, logoUrl}
+     * Data can include: {title, salary, equity,companyHandle}
      *
-     * Returns {handle, name, description, numEmployees, logoUrl}
+     * Returns {title, salary, equity,companyHandle}
      *
      * Throws NotFoundError if not found.
      */
@@ -125,11 +134,11 @@ class Jobs {
                                   title, 
                                   salary, 
                                   equity,
-                                  company_handle AS "company"`;
+                                  company_handle AS "companyHandle"`;
       const result = await db.query(querySql, [...values, id]);
       const job = result.rows[0];
   
-      if (!job) throw new NotFoundError(`No company: ${id}`);
+      if (!job) throw new NotFoundError(`No job: ${id}`);
   
       return job;
     }
@@ -148,9 +157,9 @@ class Jobs {
           [id]);
       const job = result.rows[0];
   
-      if (!job) throw new NotFoundError(`No company: ${id}`);
+      if (!job) throw new NotFoundError(`No job: ${id}`);
     }
   }
   
   
-  module.exports = Jobs;
+  module.exports = Job;

@@ -6,7 +6,7 @@ const jsonschema = require("jsonschema");
 const express = require("express");
 
 const { BadRequestError } = require("../expressError");
-const { ensureLoggedIn, isAdmin } = require("../middleware/auth");
+const { ensureLoggedIn, isAdmin, validTokenAndAdmin } = require("../middleware/auth");
 const Job = require("../models/jobs");
 
 const jobNewSchema = require("../schemas/jobNew.json");
@@ -52,16 +52,16 @@ router.post("/", ensureLoggedIn, isAdmin, async function (req, res, next) {
  */
 
 router.get("/", async function (req, res, next) {
-  const query = req.query;
-  if (query.minSalary !== undefined) query.minSalary = +query.minSalary;
-  query.hasEquity = query.hasEquity === "true";
+  const filterQuery = req.query;
+  if (filterQuery.minSalary !== undefined) filterQuery.minSalary = +filterQuery.minSalary;
+  filterQuery.hasEquity = filterQuery.hasEquity === "true";
   try {
     const result = jsonschema.validate(filters, jobSearchSchema);
     if (!result.valid) {
       let listOfErrors = result.errors.map((e) => e.stack);
       throw new BadRequestError(listOfErrors);
     }
-    const jobs = await Job.findAll(query);
+    const jobs = await Job.findAll(filterQuery);
     return res.json({ jobs });
   } catch (err) {
     return next(err);
@@ -96,7 +96,7 @@ router.get("/:id", async function (req, res, next) {
  * Authorization required: login
  */
 
-router.patch("/:id", ensureLoggedIn,isAdmin, async function (req, res, next) {
+router.patch("/:id", validTokenAndAdmin, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, jobUpdateSchema);
     if (!validator.valid) {

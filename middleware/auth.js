@@ -47,13 +47,31 @@ function isAdmin(req, res, next) {
       throw new UnauthorizedError();
     } return next();
   } catch (err) {
-    return next(err);
+    return next(err)
   }
 }
+function validTokenAndAdmin(req, res, next) {
+	try {
+		if (
+			!(
+				res.locals.user &&
+				(res.locals.user.isAdmin || res.locals.user.username === req.params.username)
+			)
+		) {
+			throw new UnauthorizedError();
+		}
+		return next();
+	} catch (error) {
+		return next(error);
+	}
+}
+
+
 
 
 module.exports = {
   authenticateJWT,
   ensureLoggedIn,
-  isAdmin
+  isAdmin,
+  validTokenAndAdmin
 };

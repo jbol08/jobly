@@ -55,9 +55,6 @@ class Job {
       if (hasEquity  === true) {
         sqlQuery.push(`equity > 0`);
       }
-      if (hasEquity === false) {
-        sqlQuery.push(`No equity for this position.`);  
-      }
   
       if (title !== undefined) {
         queryValues.push(`%${title}%`);
@@ -81,7 +78,7 @@ class Job {
      **/
   
     static async get(id) {
-      const jobs = await db.query(
+      const jobRes = await db.query(
             `SELECT id,
                     title,
                     salary,
@@ -91,7 +88,7 @@ class Job {
              WHERE id = $1`,
           [id]);
   
-      const job = jobs.rows[0];
+      const job = jobRes.rows[0];
   
       if (!job) throw new NotFoundError(`No job: ${id}`);
       const companiesRes = await db.query(

@@ -52,20 +52,26 @@ router.post("/", ensureLoggedIn, isAdmin, async function (req, res, next) {
  */
 
 router.get("/", async function (req, res, next) {
-  const filterQuery = req.query;
-  if (filterQuery.minSalary !== undefined) filterQuery.minSalary = +filterQuery.minSalary;
-  filterQuery.hasEquity = filterQuery.hasEquity === "true";
-  try {
-    const result = jsonschema.validate(filters, jobSearchSchema);
-    if (!result.valid) {
-      let listOfErrors = result.errors.map((e) => e.stack);
-      throw new BadRequestError(listOfErrors);
-    }
-    const jobs = await Job.findAll(filterQuery);
-    return res.json({ jobs });
-  } catch (err) {
-    return next(err);
-  }
+  const filters = req.query;
+	// convert string form of salary filter to number, if present
+	if (filters.minSalary !== undefined) filters.minSalary = +filters.minSalary;
+	// check if hasEquity filter is equal to string form of 'true'. If so, set boolean of true to hasEquity, otherwise, set to false
+	filters.hasEquity = filters.hasEquity === 'true';
+
+	// validate the info against the job search schema; if not validated, throw error
+	try {
+		const result = jsonschema.validate(filters, jobSearchSchema);
+		if (!result.valid) {
+			let listOfErrors = result.errors.map((e) => e.stack);
+			throw new BadRequestError(listOfErrors);
+		}
+
+		// use model method to query db with applied filters and return the jobs object
+		const jobs = await Job.findAll(filters);
+		return res.json({ jobs });
+	} catch (err) {
+		return next(err);
+	}
 });
 
 /** GET /[handle]  =>  { company }
@@ -76,13 +82,13 @@ router.get("/", async function (req, res, next) {
  * Authorization required: none
  */
 
-router.get("/:id", async function (req, res, next) {
-  try {
-    const job = await Job.get(req.params.id);
-    return res.json({ job });
-  } catch (err) {
-    return next(err);
-  }
+ router.get('/:id', async function(req, res, next) {
+	try {
+		const job = await Job.get(req.params.id);
+		return res.json({ job });
+	} catch (err) {
+		return next(err);
+	}
 });
 
 /** PATCH /[id] { fld1, fld2, ... } => { company }

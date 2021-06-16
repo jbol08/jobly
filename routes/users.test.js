@@ -13,7 +13,7 @@ const {
   commonAfterAll,
   u1Token,
 } = require("./_testCommon");
-const { adminToken, u2Token } = require("../../../Downloads/express-jobly-solution/express-jobly-solution/routes/_testCommon.js");
+const { adminToken, u2Token } = require("./_testCommon");
 
 beforeAll(commonBeforeAll);
 beforeEach(commonBeforeEach);

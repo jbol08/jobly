@@ -84,7 +84,7 @@ class Company {
     if (sqlQuery.length > 0) {
       filterQuery += " WHERE " + sqlQuery.join(" AND ");
     }
-    filterQuery = filterQuery + 'ORDER by name'
+    filterQuery = filterQuery + `ORDER by name`;
     let companiesRes = await db.query(filterQuery, queryValues);
     return companiesRes.rows;
   }
